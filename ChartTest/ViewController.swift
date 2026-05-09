@@ -25,6 +25,31 @@ class ViewController: UIViewController {
         ])
 
         chartView.segments = makeTestSegments()
+
+        let twoFingerGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleTwoFingerGesture(_:)))
+        twoFingerGesture.numberOfTouchesRequired = 2
+        twoFingerGesture.minimumPressDuration = 0
+        view.addGestureRecognizer(twoFingerGesture)
+    }
+
+    @objc private func handleTwoFingerGesture(_ gesture: UILongPressGestureRecognizer) {
+        switch gesture.state {
+        case .began, .changed:
+            guard gesture.numberOfTouches == 2 else { return }
+            let p1 = gesture.location(ofTouch: 0, in: view)
+            let p2 = gesture.location(ofTouch: 1, in: view)
+
+            let start = view.convert(p1, to: chartView)
+            let end = view.convert(p2, to: chartView)
+
+            chartView.selection = ChartSelection(startPoint: start, endPoint: end)
+
+        case .ended, .cancelled:
+            chartView.selection = nil
+
+        default:
+            break
+        }
     }
 
     private func makeTestSegments() -> [ChartSegment] {
