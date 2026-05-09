@@ -1,10 +1,5 @@
 import UIKit
 
-struct AreaSegment {
-    let path: CGPath
-    let style: ChartSegment.Style
-}
-
 final class SegmentedAreaLayer: CALayer {
 
     private var areaLayers: [AreaLayer] = []
