@@ -111,8 +111,13 @@ final class AreaSeriesView: UIView {
         let rawMaxX = max(selection.startPoint.x, selection.endPoint.x)
 
         // Snap to nearest data points (binary search)
-        let snappedStart = mappedPoints[nearestIndex(to: rawMinX)]
-        let snappedEnd = mappedPoints[nearestIndex(to: rawMaxX)]
+        guard let startIndex = mappedPoints.nearestIndex(to: rawMinX, by: \.x),
+              let endIndex = mappedPoints.nearestIndex(to: rawMaxX, by: \.x) else {
+            CATransaction.commit()
+            return
+        }
+        let snappedStart = mappedPoints[startIndex]
+        let snappedEnd = mappedPoints[endIndex]
 
         // Trend from data Y at snapped edges (screen Y inverted)
         let isPositive = snappedStart.y >= snappedEnd.y
@@ -132,23 +137,4 @@ final class AreaSeriesView: UIView {
         CATransaction.commit()
     }
 
-    private func nearestIndex(to targetX: CGFloat) -> Int {
-        var lo = 0
-        var hi = mappedPoints.count - 1
-
-        while lo < hi {
-            let mid = (lo + hi) / 2
-            if mappedPoints[mid].x < targetX {
-                lo = mid + 1
-            } else {
-                hi = mid
-            }
-        }
-
-        // Check neighbor to find actual nearest
-        if lo > 0 && abs(mappedPoints[lo - 1].x - targetX) < abs(mappedPoints[lo].x - targetX) {
-            return lo - 1
-        }
-        return lo
-    }
 }
