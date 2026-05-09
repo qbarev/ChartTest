@@ -20,7 +20,9 @@ final class AreaSeriesView: UIView {
     private let segmentedLayer = SegmentedAreaLayer()
     private let selectionLayer = AreaLayer()
     private let selectionMask = CAShapeLayer()
+    private let invertedMask = CAShapeLayer()
     private var mapper: ChartPointMapper?
+    private var mappedPoints: [CGPoint] = []
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -39,6 +41,9 @@ final class AreaSeriesView: UIView {
         selectionLayer.mask = selectionMask
         selectionLayer.isHidden = true
         layer.addSublayer(selectionLayer)
+
+        invertedMask.fillRule = .evenOdd
+        segmentedLayer.mask = invertedMask
     }
 
     override func layoutSubviews() {
@@ -70,8 +75,11 @@ final class AreaSeriesView: UIView {
         segmentedLayer.frame = bounds
         segmentedLayer.setSegments(areaSegments, lineWidth: lineWidth)
 
+        // Cache mapped points for selection snapping
+        mappedPoints = mapper.map(allPoints)
+
         // Update selection layer path and keep it on top
-        let fullPath = LineSeriesDrawer(points: mapper.map(allPoints)).path
+        let fullPath = LineSeriesDrawer(points: mappedPoints).path
         selectionLayer.frame = bounds
         selectionLayer.path = fullPath
         selectionMask.frame = bounds
@@ -86,7 +94,12 @@ final class AreaSeriesView: UIView {
         guard let selection = selection else {
             selectionLayer.isHidden = true
             segmentedLayer.opacity = 1.0
-            segmentedLayer.mask = nil
+            invertedMask.path = UIBezierPath(rect: bounds).cgPath
+            CATransaction.commit()
+            return
+        }
+
+        guard mappedPoints.count > 1 else {
             CATransaction.commit()
             return
         }
@@ -97,13 +110,9 @@ final class AreaSeriesView: UIView {
         let rawMinX = min(selection.startPoint.x, selection.endPoint.x)
         let rawMaxX = max(selection.startPoint.x, selection.endPoint.x)
 
-        // Snap to nearest data points
-        let allMapped = segments.flatMap(\.points).compactMap { mapper?.map($0) }
-        guard let snappedStart = allMapped.min(by: { abs($0.x - rawMinX) < abs($1.x - rawMinX) }),
-              let snappedEnd = allMapped.min(by: { abs($0.x - rawMaxX) < abs($1.x - rawMaxX) }) else {
-            CATransaction.commit()
-            return
-        }
+        // Snap to nearest data points (binary search)
+        let snappedStart = mappedPoints[nearestIndex(to: rawMinX)]
+        let snappedEnd = mappedPoints[nearestIndex(to: rawMaxX)]
 
         // Trend from data Y at snapped edges (screen Y inverted)
         let isPositive = snappedStart.y >= snappedEnd.y
@@ -114,16 +123,32 @@ final class AreaSeriesView: UIView {
         selectionMask.path = UIBezierPath(rect: selectionRect).cgPath
 
         // Inverted mask on segmentedLayer: show everything except selection area
-        let invertedPath = UIBezierPath(rect: bounds)
-        invertedPath.append(UIBezierPath(rect: selectionRect))
-        invertedPath.usesEvenOddFillRule = true
+        let path = UIBezierPath(rect: bounds)
+        path.append(UIBezierPath(rect: selectionRect))
 
-        let invertedMask = CAShapeLayer()
         invertedMask.frame = bounds
-        invertedMask.path = invertedPath.cgPath
-        invertedMask.fillRule = .evenOdd
-        segmentedLayer.mask = invertedMask
+        invertedMask.path = path.cgPath
 
         CATransaction.commit()
+    }
+
+    private func nearestIndex(to targetX: CGFloat) -> Int {
+        var lo = 0
+        var hi = mappedPoints.count - 1
+
+        while lo < hi {
+            let mid = (lo + hi) / 2
+            if mappedPoints[mid].x < targetX {
+                lo = mid + 1
+            } else {
+                hi = mid
+            }
+        }
+
+        // Check neighbor to find actual nearest
+        if lo > 0 && abs(mappedPoints[lo - 1].x - targetX) < abs(mappedPoints[lo].x - targetX) {
+            return lo - 1
+        }
+        return lo
     }
 }
