@@ -41,15 +41,15 @@ class ViewController: UIViewController {
             bluePoints.append(CGPoint(x: CGFloat(i), y: price))
         }
 
-        var greenPoints: [CGPoint] = [bluePoints.last!]
-        for i in 1..<100 {
+        var greenPoints: [CGPoint] = []
+        for i in 0..<100 {
             price += CGFloat.random(in: -0.4...0.42)
             price = max(288, min(295, price))
             greenPoints.append(CGPoint(x: CGFloat(120 + i), y: price))
         }
 
-        var grayPoints: [CGPoint] = [greenPoints.last!]
-        for i in 1..<60 {
+        var grayPoints: [CGPoint] = []
+        for i in 0..<60 {
             price += CGFloat.random(in: -0.3...0.35)
             price = max(288, min(295, price))
             grayPoints.append(CGPoint(x: CGFloat(220 + i), y: price))

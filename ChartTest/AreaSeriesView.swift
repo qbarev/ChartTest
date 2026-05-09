@@ -54,12 +54,19 @@ final class AreaSeriesView: UIView {
             return CGPoint(x: x, y: y)
         }
 
-        for segment in segments {
-            guard segment.points.count > 1 else { continue }
+        for (index, segment) in segments.enumerated() {
+            guard !segment.points.isEmpty else { continue }
 
             let mapped = segment.points.map { mapPoint($0) }
             let path = CGMutablePath()
-            path.move(to: mapped[0])
+
+            if index > 0, let prevLast = segments[index - 1].points.last {
+                path.move(to: mapPoint(prevLast))
+                path.addLine(to: mapped[0])
+            } else {
+                path.move(to: mapped[0])
+            }
+
             for i in 1..<mapped.count {
                 path.addLine(to: mapped[i])
             }
@@ -71,7 +78,7 @@ final class AreaSeriesView: UIView {
             area.areaColor = segment.style.areaColor
             area.path = path
 
-            layer.addSublayer(area)
+            layer.insertSublayer(area, at: 0)
             chartLayers.append(area)
         }
     }
