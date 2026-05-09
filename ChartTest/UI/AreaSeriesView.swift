@@ -10,18 +10,29 @@ final class AreaSeriesView: UIView {
         didSet { updateSelection() }
     }
 
+    struct SelectionStyle {
+        let positiveLineColor: UIColor
+        let positiveAreaColor: UIColor
+        let negativeLineColor: UIColor
+        let negativeAreaColor: UIColor
+        let dimmedOpacity: Float
+
+        static let `default` = SelectionStyle(
+            positiveLineColor: UIColor(red: 0.33, green: 0.82, blue: 0.68, alpha: 1.0),
+            positiveAreaColor: UIColor(red: 0.13, green: 0.33, blue: 0.27, alpha: 1.0),
+            negativeLineColor: UIColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0),
+            negativeAreaColor: UIColor(red: 0.36, green: 0.12, blue: 0.12, alpha: 1.0),
+            dimmedOpacity: 0.3
+        )
+    }
+
     private let lineWidth: CGFloat = 1.5
-    private let dimmedOpacity: Float = 0.3
-    private let positiveLineColor = UIColor(red: 0.33, green: 0.82, blue: 0.68, alpha: 1.0)
-    private let positiveAreaColor = UIColor(red: 0.13, green: 0.33, blue: 0.27, alpha: 1.0)
-    private let negativeLineColor = UIColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)
-    private let negativeAreaColor = UIColor(red: 0.36, green: 0.12, blue: 0.12, alpha: 1.0)
+    var selectionStyle: SelectionStyle = .default
 
     private let segmentedLayer = SegmentedAreaLayer()
     private let selectionLayer = AreaLayer()
     private let selectionMask = CAShapeLayer()
     private let invertedMask = CAShapeLayer()
-    private var mapper: ChartPointMapper?
     private var mappedPoints: [CGPoint] = []
 
     override init(frame: CGRect) {
@@ -58,7 +69,6 @@ final class AreaSeriesView: UIView {
     private func rebuild() {
         let allPoints = segments.flatMap(\.points)
         guard let mapper = ChartPointMapper(allPoints: allPoints, bounds: bounds) else { return }
-        self.mapper = mapper
 
         segmentedLayer.frame = bounds
         segmentedLayer.setSegments(segments, mapper: mapper, lineWidth: lineWidth)
@@ -93,7 +103,7 @@ final class AreaSeriesView: UIView {
         }
 
         selectionLayer.isHidden = false
-        segmentedLayer.opacity = dimmedOpacity
+        segmentedLayer.opacity = selectionStyle.dimmedOpacity
 
         let rawMinX = min(selection.startPoint.x, selection.endPoint.x)
         let rawMaxX = max(selection.startPoint.x, selection.endPoint.x)
@@ -109,8 +119,8 @@ final class AreaSeriesView: UIView {
 
         // Trend from data Y at snapped edges (screen Y inverted)
         let isPositive = snappedStart.y >= snappedEnd.y
-        selectionLayer.lineColor = isPositive ? positiveLineColor : negativeLineColor
-        selectionLayer.areaColor = isPositive ? positiveAreaColor : negativeAreaColor
+        selectionLayer.lineColor = isPositive ? selectionStyle.positiveLineColor : selectionStyle.negativeLineColor
+        selectionLayer.areaColor = isPositive ? selectionStyle.positiveAreaColor : selectionStyle.negativeAreaColor
 
         let selectionRect = CGRect(x: snappedStart.x, y: 0, width: snappedEnd.x - snappedStart.x, height: bounds.height)
         selectionMask.path = UIBezierPath(rect: selectionRect).cgPath

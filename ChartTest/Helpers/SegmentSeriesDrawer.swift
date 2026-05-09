@@ -8,11 +8,16 @@ struct SegmentSeriesDrawer {
         var result: [CGPath] = []
 
         for (index, points) in pointsPerSegment.enumerated() {
-            var mapped = mapper.map(points)
+            var mapped: [CGPoint] = []
 
             if index > 0, let prevLast = pointsPerSegment[index - 1].last {
-                mapped.insert(mapper.map(prevLast), at: 0)
+                mapped.reserveCapacity(points.count + 1)
+                mapped.append(mapper.map(prevLast))
+            } else {
+                mapped.reserveCapacity(points.count)
             }
+
+            mapped.append(contentsOf: mapper.map(points))
 
             let drawer = LineSeriesDrawer(points: mapped)
             result.append(drawer.path)

@@ -37,12 +37,13 @@ final class AreaLayer: LineLayer {
 
     override func layoutSublayers() {
         super.layoutSublayers()
-        gradientLayer.frame = bounds
-        gradientMask.frame = bounds
         updateGradient()
     }
 
     private func updateGradient() {
+        gradientLayer.frame = bounds
+        gradientMask.frame = bounds
+
         guard let color = areaColor, let linePath = path else {
             gradientLayer.isHidden = true
             return

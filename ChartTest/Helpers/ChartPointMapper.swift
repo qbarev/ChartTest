@@ -12,10 +12,14 @@ struct ChartPointMapper {
     init?(allPoints: [CGPoint], bounds: CGRect, padding: CGFloat = 16) {
         guard allPoints.count > 1 else { return nil }
 
-        let allX = allPoints.map(\.x)
-        let allY = allPoints.map(\.y)
-        let minX = allX.min()!, maxX = allX.max()!
-        let minY = allY.min()!, maxY = allY.max()!
+        var minX = allPoints[0].x, maxX = minX
+        var minY = allPoints[0].y, maxY = minY
+        for point in allPoints.dropFirst() {
+            if point.x < minX { minX = point.x }
+            else if point.x > maxX { maxX = point.x }
+            if point.y < minY { minY = point.y }
+            else if point.y > maxY { maxY = point.y }
+        }
 
         guard maxX > minX, maxY > minY else { return nil }
 
