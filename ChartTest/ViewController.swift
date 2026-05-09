@@ -54,8 +54,11 @@ class ViewController: UIViewController {
 
     private func makeTestSegments() -> [ChartSegment] {
         let blue = UIColor(red: 0.25, green: 0.52, blue: 0.96, alpha: 1.0)
+        let blueArea = UIColor(red: 0.10, green: 0.21, blue: 0.38, alpha: 1.0)
         let green = UIColor(red: 0.33, green: 0.82, blue: 0.68, alpha: 1.0)
+        let greenArea = UIColor(red: 0.13, green: 0.33, blue: 0.27, alpha: 1.0)
         let gray = UIColor(white: 0.65, alpha: 1.0)
+        let grayArea = UIColor(white: 0.26, alpha: 1.0)
 
         var price: CGFloat = 291.0
 
@@ -83,15 +86,15 @@ class ViewController: UIViewController {
         return [
             ChartSegment(
                 points: bluePoints,
-                style: .init(lineColor: blue, areaColor: blue)
+                style: .init(lineColor: blue, areaColor: blueArea)
             ),
             ChartSegment(
                 points: greenPoints,
-                style: .init(lineColor: green, areaColor: green)
+                style: .init(lineColor: green, areaColor: greenArea)
             ),
             ChartSegment(
                 points: grayPoints,
-                style: .init(lineColor: gray, areaColor: gray)
+                style: .init(lineColor: gray, areaColor: grayArea)
             )
         ]
     }

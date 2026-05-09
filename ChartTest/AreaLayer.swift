@@ -50,7 +50,7 @@ final class AreaLayer: LineLayer {
 
         gradientLayer.isHidden = false
         gradientLayer.colors = [
-            color.withAlphaComponent(0.4).cgColor,
+            color.cgColor,
             color.withAlphaComponent(0.0).cgColor
         ]
 

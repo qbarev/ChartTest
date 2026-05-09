@@ -27,10 +27,12 @@ final class AreaSeriesView: UIView {
 
     private let lineWidth: CGFloat = 1.5
     private let dimmedOpacity: Float = 0.3
-    private let positiveColor = UIColor(red: 0.33, green: 0.82, blue: 0.68, alpha: 1.0)
-    private let negativeColor = UIColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)
+    private let positiveLineColor = UIColor(red: 0.33, green: 0.82, blue: 0.68, alpha: 1.0)
+    private let positiveAreaColor = UIColor(red: 0.13, green: 0.33, blue: 0.27, alpha: 1.0)
+    private let negativeLineColor = UIColor(red: 0.9, green: 0.3, blue: 0.3, alpha: 1.0)
+    private let negativeAreaColor = UIColor(red: 0.36, green: 0.12, blue: 0.12, alpha: 1.0)
 
-    private var chartLayers: [AreaLayer] = []
+    private let segmentedLayer = SegmentedAreaLayer()
     private let selectionLayer = AreaLayer()
     private let selectionMask = CAShapeLayer()
     private var mapper: ChartPointMapper?
@@ -46,6 +48,8 @@ final class AreaSeriesView: UIView {
     }
 
     private func setup() {
+        layer.addSublayer(segmentedLayer)
+
         selectionLayer.lineWidth = lineWidth
         selectionLayer.mask = selectionMask
         selectionLayer.isHidden = true
@@ -62,9 +66,6 @@ final class AreaSeriesView: UIView {
     }
 
     private func rebuild() {
-        chartLayers.forEach { $0.removeFromSuperlayer() }
-        chartLayers.removeAll()
-
         let allPoints = segments.flatMap(\.points)
         guard let mapper = ChartPointMapper(allPoints: allPoints, bounds: bounds) else { return }
         self.mapper = mapper
@@ -75,24 +76,20 @@ final class AreaSeriesView: UIView {
         )
         guard drawer.count > 0 else { return }
 
+        // Build segments for SegmentedAreaLayer
+        var areaSegments: [AreaSegment] = []
         for (index, segment) in segments.enumerated() {
-            let area = AreaLayer()
-            area.frame = bounds
-            area.lineColor = segment.style.lineColor
-            area.lineWidth = lineWidth
-            area.areaColor = segment.style.areaColor
-            area.path = drawer[index]
-
-            layer.insertSublayer(area, at: 0)
-            chartLayers.append(area)
+            areaSegments.append(AreaSegment(path: drawer[index], style: segment.style))
         }
+
+        segmentedLayer.frame = bounds
+        segmentedLayer.setSegments(areaSegments, lineWidth: lineWidth)
 
         // Update selection layer path and keep it on top
         let fullPath = LineSeriesDrawer(points: mapper.map(allPoints)).path
         selectionLayer.frame = bounds
         selectionLayer.path = fullPath
         selectionMask.frame = bounds
-        layer.addSublayer(selectionLayer)
 
         updateSelection()
     }
@@ -103,13 +100,14 @@ final class AreaSeriesView: UIView {
 
         guard let selection = selection else {
             selectionLayer.isHidden = true
-            chartLayers.forEach { $0.opacity = 1.0 }
+            segmentedLayer.opacity = 1.0
+            segmentedLayer.mask = nil
             CATransaction.commit()
             return
         }
 
         selectionLayer.isHidden = false
-        chartLayers.forEach { $0.opacity = dimmedOpacity }
+        segmentedLayer.opacity = dimmedOpacity
 
         let rawMinX = min(selection.startPoint.x, selection.endPoint.x)
         let rawMaxX = max(selection.startPoint.x, selection.endPoint.x)
@@ -124,12 +122,22 @@ final class AreaSeriesView: UIView {
 
         // Trend from data Y at snapped edges (screen Y inverted)
         let isPositive = snappedStart.y >= snappedEnd.y
-        let trendColor = isPositive ? positiveColor : negativeColor
-        selectionLayer.lineColor = trendColor
-        selectionLayer.areaColor = trendColor
+        selectionLayer.lineColor = isPositive ? positiveLineColor : negativeLineColor
+        selectionLayer.areaColor = isPositive ? positiveAreaColor : negativeAreaColor
 
-        let maskRect = CGRect(x: snappedStart.x, y: 0, width: snappedEnd.x - snappedStart.x, height: bounds.height)
-        selectionMask.path = UIBezierPath(rect: maskRect).cgPath
+        let selectionRect = CGRect(x: snappedStart.x, y: 0, width: snappedEnd.x - snappedStart.x, height: bounds.height)
+        selectionMask.path = UIBezierPath(rect: selectionRect).cgPath
+
+        // Inverted mask on segmentedLayer: show everything except selection area
+        let invertedPath = UIBezierPath(rect: bounds)
+        invertedPath.append(UIBezierPath(rect: selectionRect))
+        invertedPath.usesEvenOddFillRule = true
+
+        let invertedMask = CAShapeLayer()
+        invertedMask.frame = bounds
+        invertedMask.path = invertedPath.cgPath
+        invertedMask.fillRule = .evenOdd
+        segmentedLayer.mask = invertedMask
 
         CATransaction.commit()
     }
