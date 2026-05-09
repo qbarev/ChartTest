@@ -60,20 +60,8 @@ final class AreaSeriesView: UIView {
         guard let mapper = ChartPointMapper(allPoints: allPoints, bounds: bounds) else { return }
         self.mapper = mapper
 
-        let drawer = SegmentSeriesDrawer(
-            pointsPerSegment: segments.map(\.points),
-            mapper: mapper
-        )
-        guard drawer.count > 0 else { return }
-
-        // Build segments for SegmentedAreaLayer
-        var areaSegments: [AreaSegment] = []
-        for (index, segment) in segments.enumerated() {
-            areaSegments.append(AreaSegment(path: drawer[index], style: segment.style))
-        }
-
         segmentedLayer.frame = bounds
-        segmentedLayer.setSegments(areaSegments, lineWidth: lineWidth)
+        segmentedLayer.setSegments(segments, mapper: mapper, lineWidth: lineWidth)
 
         // Cache mapped points for selection snapping
         mappedPoints = mapper.map(allPoints)
